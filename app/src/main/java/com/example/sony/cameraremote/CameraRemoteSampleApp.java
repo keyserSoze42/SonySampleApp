@@ -4,7 +4,9 @@
 
 package com.example.sony.cameraremote;
 
-import com.example.sony.cameraremote.ServerDevice.ApiService;
+import sony.sdk.camera.ServerDevice;
+import sony.sdk.camera.ServerDevice.ApiService;
+import sony.sdk.camera.SimpleSsdpClient;
 
 import android.app.Activity;
 import android.content.Context;

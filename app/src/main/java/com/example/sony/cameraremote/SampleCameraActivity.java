@@ -4,7 +4,11 @@
 
 package com.example.sony.cameraremote;
 
-import com.example.sony.cameraremote.utils.DisplayHelper;
+import sony.sdk.camera.ServerDevice;
+import sony.sdk.camera.SimpleCameraEventObserver;
+import sony.sdk.camera.SimpleRemoteApi;
+import sony.sdk.camera.SimpleStreamSurfaceView;
+import sony.sdk.camera.utils.DisplayHelper;
 
 import org.json.JSONArray;
 import org.json.JSONException;

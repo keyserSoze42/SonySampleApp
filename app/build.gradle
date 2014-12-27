@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.sony.cameraremote"
-        minSdkVersion 9
+        minSdkVersion 17
         targetSdkVersion 19
     }
 

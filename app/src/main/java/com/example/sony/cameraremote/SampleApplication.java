@@ -8,6 +8,9 @@ import android.app.Application;
 
 import java.util.Set;
 
+import sony.sdk.camera.ServerDevice;
+import sony.sdk.camera.SimpleRemoteApi;
+
 /**
  * Application class for the sample application.
  */
