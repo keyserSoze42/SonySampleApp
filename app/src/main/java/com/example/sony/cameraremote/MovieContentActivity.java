@@ -4,9 +4,9 @@
 
 package com.example.sony.cameraremote;
 
-import sony.sdk.camera.SimpleRemoteApi;
-import sony.sdk.camera.SimpleStreamSurfaceView;
-import sony.sdk.camera.utils.DisplayHelper;
+import sony.sdk.cameraremote.SimpleRemoteApi;
+import sony.sdk.cameraremote.SimpleStreamSurfaceView;
+import sony.sdk.cameraremote.utils.DisplayHelper;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,11 +36,6 @@ public class MovieContentActivity extends Activity {
         Log.d(TAG, "onCreate() exec");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-
-        Log.d(TAG, "prepare mStreamSurface");
-        mStreamSurface = new SimpleStreamSurfaceView(getApplicationContext());
-
-        setContentView(mStreamSurface);
     }
 
     @Override
@@ -56,6 +51,12 @@ public class MovieContentActivity extends Activity {
         }
 
         Log.d(TAG, "onResume() exec");
+
+        Log.d(TAG, "prepare mStreamSurface");
+        mStreamSurface = new SimpleStreamSurfaceView(getApplicationContext());
+
+        setContentView(mStreamSurface);
+
         if (mStreamSurface.isStarted()) {
             return;
         }
@@ -109,6 +110,9 @@ public class MovieContentActivity extends Activity {
                     }
 
                     // Start retrieving image stream.
+                    if (mStreamSurface == null) {
+                        return;
+                    }
                     mStreamSurface.start(streamingUrl, //
                             new SimpleStreamSurfaceView.StreamErrorListener() {
 
@@ -153,6 +157,7 @@ public class MovieContentActivity extends Activity {
         super.onPause();
         Log.d(TAG, "onPause() exec");
         mStreamSurface.stop();
+        mStreamSurface = null;
         stopStreaming();
     }
 }

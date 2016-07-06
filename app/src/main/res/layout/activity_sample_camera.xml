@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
 
-    <sony.sdk.camera.SimpleStreamSurfaceView
+    <com.example.sony.cameraremote.SimpleStreamSurfaceView
         android:id="@+id/surfaceview_liveview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

@@ -20,6 +20,7 @@
     <string name="msg_error_connection">Failed to connect to the device.</string>
     <string name="msg_error_non_supported_device">Unsupported device in this sample app.</string>
     <string name="msg_error_content">Contents not available.</string>
+    <string name="msg_error_streaming_playback">Movie playback is not supported.</string>
     <string name="no_image">No image</string>
     <string name="prompt_shoot_mode">Select shoot mode</string>
     <string name="msg_error_no_supported_shootmode">Unsupported shoot mode in this sample app.</string>

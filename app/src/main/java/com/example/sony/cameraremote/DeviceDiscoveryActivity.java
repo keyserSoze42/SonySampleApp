@@ -4,15 +4,13 @@
 
 package com.example.sony.cameraremote;
 
-import sony.sdk.camera.ServerDevice;
-import sony.sdk.camera.ServerDevice.ApiService;
-import sony.sdk.camera.SimpleSsdpClient;
+import sony.sdk.cameraremote.ServerDevice;
+import sony.sdk.cameraremote.ServerDevice.ApiService;
+import sony.sdk.cameraremote.SimpleSsdpClient;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.text.Html;
 import android.util.Log;
@@ -33,9 +31,9 @@ import java.util.List;
 /**
  * An Activity class of Device Discovery screen.
  */
-public class CameraRemoteSampleApp extends Activity {
+public class DeviceDiscoveryActivity extends Activity {
 
-    private static final String TAG = CameraRemoteSampleApp.class.getSimpleName();
+    private static final String TAG = DeviceDiscoveryActivity.class.getSimpleName();
 
     private SimpleSsdpClient mSsdpClient;
 
@@ -84,17 +82,6 @@ public class CameraRemoteSampleApp extends Activity {
             }
         });
 
-        // Show Wi-Fi SSID.
-        TextView textWifiSsid = (TextView) findViewById(R.id.text_wifi_ssid);
-        WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-        if (wifiManager.getWifiState() == WifiManager.WIFI_STATE_ENABLED) {
-            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-            String htmlLabel = String.format("SSID: <b>%s</b>", wifiInfo.getSSID());
-            textWifiSsid.setText(Html.fromHtml(htmlLabel));
-        } else {
-            textWifiSsid.setText(R.string.msg_wifi_disconnect);
-        }
-
         Log.d(TAG, "onResume() completed.");
     }
 
@@ -139,7 +126,7 @@ public class CameraRemoteSampleApp extends Activity {
                         setProgressBarIndeterminateVisibility(false);
                         findViewById(R.id.button_search).setEnabled(true);
                         if (mActivityActive) {
-                            Toast.makeText(CameraRemoteSampleApp.this, //
+                            Toast.makeText(DeviceDiscoveryActivity.this, //
                                     R.string.msg_device_search_finish, //
                                     Toast.LENGTH_SHORT).show(); //
                         }
@@ -157,7 +144,7 @@ public class CameraRemoteSampleApp extends Activity {
                         setProgressBarIndeterminateVisibility(false);
                         findViewById(R.id.button_search).setEnabled(true);
                         if (mActivityActive) {
-                            Toast.makeText(CameraRemoteSampleApp.this, //
+                            Toast.makeText(DeviceDiscoveryActivity.this, //
                                     R.string.msg_error_device_searching, //
                                     Toast.LENGTH_SHORT).show(); //
                         }
@@ -174,7 +161,7 @@ public class CameraRemoteSampleApp extends Activity {
      */
     private void launchSampleActivity(ServerDevice device) {
         // Go to CameraSampleActivity.
-        Toast.makeText(CameraRemoteSampleApp.this, device.getFriendlyName(), Toast.LENGTH_SHORT) //
+        Toast.makeText(DeviceDiscoveryActivity.this, device.getFriendlyName(), Toast.LENGTH_SHORT) //
                 .show();
 
         // Set target ServerDevice instance to control in Activity.

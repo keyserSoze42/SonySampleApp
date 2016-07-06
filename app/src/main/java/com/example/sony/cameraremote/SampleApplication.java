@@ -8,8 +8,9 @@ import android.app.Application;
 
 import java.util.Set;
 
-import sony.sdk.camera.ServerDevice;
-import sony.sdk.camera.SimpleRemoteApi;
+import sony.sdk.cameraremote.ServerDevice;
+import sony.sdk.cameraremote.SimpleCameraEventObserver;
+import sony.sdk.cameraremote.SimpleRemoteApi;
 
 /**
  * Application class for the sample application.
@@ -19,6 +20,8 @@ public class SampleApplication extends Application {
     private ServerDevice mTargetDevice;
 
     private SimpleRemoteApi mRemoteApi;
+
+    private SimpleCameraEventObserver mEventObserver;
 
     private Set<String> mSupportedApiSet;
 
@@ -74,5 +77,23 @@ public class SampleApplication extends Application {
      */
     public Set<String> getSupportedApiList() {
         return mSupportedApiSet;
+    }
+
+    /**
+     * Sets a SimpleCameraEventObserver object to transmit to Activity.
+     *
+     * @param observer
+     */
+    public void setCameraEventObserver(SimpleCameraEventObserver observer) {
+        mEventObserver = observer;
+    }
+
+    /**
+     * Returns a SimpleCameraEventObserver object.
+     *
+     * @return return SimpleCameraEventObserver
+     */
+    public SimpleCameraEventObserver getCameraEventObserver() {
+        return mEventObserver;
     }
 }

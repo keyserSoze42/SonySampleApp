@@ -4,11 +4,11 @@
 
 package com.example.sony.cameraremote;
 
-import sony.sdk.camera.ServerDevice;
-import sony.sdk.camera.SimpleCameraEventObserver;
-import sony.sdk.camera.SimpleRemoteApi;
-import sony.sdk.camera.SimpleStreamSurfaceView;
-import sony.sdk.camera.utils.DisplayHelper;
+import sony.sdk.cameraremote.ServerDevice;
+import sony.sdk.cameraremote.SimpleCameraEventObserver;
+import sony.sdk.cameraremote.SimpleRemoteApi;
+import sony.sdk.cameraremote.SimpleStreamSurfaceView;
+import sony.sdk.cameraremote.utils.DisplayHelper;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -89,6 +89,7 @@ public class SampleCameraActivity extends Activity {
         mRemoteApi = new SimpleRemoteApi(mTargetServer);
         app.setRemoteApi(mRemoteApi);
         mEventObserver = new SimpleCameraEventObserver(getApplicationContext(), mRemoteApi);
+        app.setCameraEventObserver(mEventObserver);
         mImagePictureWipe = (ImageView) findViewById(R.id.image_picture_wipe);
         mSpinnerShootMode = (Spinner) findViewById(R.id.spinner_shoot_mode);
         mButtonTakePicture = (Button) findViewById(R.id.button_take_picture);
@@ -380,6 +381,7 @@ public class SampleCameraActivity extends Activity {
     private static boolean isShootingStatus(String currentStatus) {
         Set<String> shootingStatus = new HashSet<String>();
         shootingStatus.add("IDLE");
+        shootingStatus.add("NotReady");
         shootingStatus.add("StillCapturing");
         shootingStatus.add("StillSaving");
         shootingStatus.add("MovieWaitRecStart");
@@ -410,7 +412,7 @@ public class SampleCameraActivity extends Activity {
                             @Override
                             public void onCameraStatusChanged(String status) {
                                 Log.d(TAG, "onCameraStatusChanged:" + status);
-                                if ("IDLE".equals(status)) {
+                                if ("IDLE".equals(status) || "NotReady".equals(status)) {
                                     openConnection();
                                 }
                                 refreshUi();
@@ -533,22 +535,6 @@ public class SampleCameraActivity extends Activity {
         Log.d(TAG, "closeConnection(): EventObserver.release()");
         mEventObserver.release();
 
-        // stopRecMode if necessary.
-        if (isCameraApiAvailable("stopRecMode")) {
-            new Thread() {
-
-                @Override
-                public void run() {
-                    Log.d(TAG, "closeConnection(): stopRecMode()");
-                    try {
-                        mRemoteApi.stopRecMode();
-                    } catch (IOException e) {
-                        Log.w(TAG, "closeConnection: IOException: " + e.getMessage());
-                    }
-                }
-            }.start();
-        }
-
         Log.d(TAG, "closeConnection(): completed.");
     }
 
@@ -558,6 +544,7 @@ public class SampleCameraActivity extends Activity {
     private void refreshUi() {
         String cameraStatus = mEventObserver.getCameraStatus();
         String shootMode = mEventObserver.getShootMode();
+        List<String> availableShootModes = mEventObserver.getAvailableShootModes();
 
         // CameraStatus TextView
         mTextCameraStatus.setText(cameraStatus);
@@ -585,10 +572,21 @@ public class SampleCameraActivity extends Activity {
             mImagePictureWipe.setVisibility(View.INVISIBLE);
         }
 
-        // Shoot Mode Buttons
-        if ("IDLE".equals(cameraStatus) || "MovieRecording".equals(cameraStatus)) {
-            mSpinnerShootMode.setEnabled(true);
+        // Update Shoot Modes List
+        ArrayAdapter<String> adapter = (ArrayAdapter<String>) mSpinnerShootMode.getAdapter();
+        if (adapter != null) {
+            adapter.clear();
+            for (String mode : availableShootModes) {
+                if (isSupportedShootMode(mode)) {
+                    adapter.add(mode);
+                }
+            }
             selectionShootModeSpinner(mSpinnerShootMode, shootMode);
+        }
+
+        // Shoot Mode Buttons
+        if ("IDLE".equals(cameraStatus)) {
+            mSpinnerShootMode.setEnabled(true);
         } else {
             mSpinnerShootMode.setEnabled(false);
         }
@@ -782,7 +780,10 @@ public class SampleCameraActivity extends Activity {
     private void prepareShootModeSpinnerUi(String[] availableShootModes, String currentMode) {
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, //
-                android.R.layout.simple_spinner_item, availableShootModes);
+                android.R.layout.simple_spinner_item);
+        for (String mode : availableShootModes) {
+            adapter.add(mode);
+        }
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mSpinnerShootMode.setAdapter(adapter);
         mSpinnerShootMode.setPrompt(getString(R.string.prompt_shoot_mode));

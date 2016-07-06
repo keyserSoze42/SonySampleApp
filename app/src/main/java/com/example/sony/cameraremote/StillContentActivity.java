@@ -4,7 +4,7 @@
 
 package com.example.sony.cameraremote;
 
-import sony.sdk.camera.utils.DisplayHelper;
+import sony.sdk.cameraremote.utils.DisplayHelper;
 
 import android.app.Activity;
 import android.content.Intent;

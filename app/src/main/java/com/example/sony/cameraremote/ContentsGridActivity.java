@@ -4,10 +4,10 @@
 
 package com.example.sony.cameraremote;
 
-import sony.sdk.camera.SimpleCameraEventObserver;
-import sony.sdk.camera.SimpleRemoteApi;
-import sony.sdk.camera.utils.DisplayHelper;
-import sony.sdk.camera.utils.SimpleRemoteApiHelper;
+import sony.sdk.cameraremote.SimpleCameraEventObserver;
+import sony.sdk.cameraremote.SimpleRemoteApi;
+import sony.sdk.cameraremote.utils.DisplayHelper;
+import sony.sdk.cameraremote.utils.SimpleRemoteApiHelper;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -21,6 +21,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,6 +40,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,6 +58,12 @@ public class ContentsGridActivity extends Activity {
     public static final String PARAM_DATE = "date";
 
     public static final String PARAM_TITLE = "title";
+
+    private static final List<String> STREAMING_API = Collections.unmodifiableList(
+            Arrays.asList(
+                    "setStreamingContent",
+                    "startStreaming",
+                    "stopStreaming"));
 
     private SimpleRemoteApi mRemoteApi;
 
@@ -116,11 +124,15 @@ public class ContentsGridActivity extends Activity {
                     intent.putExtra(StillContentActivity.PARAM_FILE_NAME, item.getFileName());
                 } else if ("movie_mp4".equals(item.getContentKind())
                         || "movie_xavcs".equals(item.getContentKind())) {
-                    // Movie content, start MovieContentActivity
                     Log.d(TAG, "Item[" + position + "] is movie content");
-                    intent = new Intent(getApplicationContext(), MovieContentActivity.class);
-                    intent.putExtra(MovieContentActivity.PARAM_MOVIE, item.getUri());
-                    intent.putExtra(MovieContentActivity.PARAM_FILE_NAME, item.getFileName());
+                    if (isStreamingPlayable()) {
+                        intent = new Intent(getApplicationContext(), MovieContentActivity.class);
+                        intent.putExtra(MovieContentActivity.PARAM_MOVIE, item.getUri());
+                        intent.putExtra(MovieContentActivity.PARAM_FILE_NAME, item.getFileName());
+                    } else {
+                        DisplayHelper.toast(getApplicationContext(), R.string.msg_error_streaming_playback);
+                        return;
+                    }
                 } else {
                     Log.w(TAG,
                             "Item[" + position + "] is unknown content type :"//
@@ -133,7 +145,20 @@ public class ContentsGridActivity extends Activity {
         });
 
         setProgressBarIndeterminateVisibility(true);
-        updateThumbnails();
+
+        // start SimpleCameraEventObserver
+        mEventObserver = app.getCameraEventObserver();
+        mEventObserver.activate();
+        setCameraStatusChangeListener();
+        mEventObserver.start();
+    }
+
+    /**
+     * @return Return {@code true} if movie contents are playable.
+     */
+    private boolean isStreamingPlayable() {
+        SampleApplication app = (SampleApplication) getApplication();
+        return app.getSupportedApiList().containsAll(STREAMING_API);
     }
 
     /**
@@ -144,20 +169,13 @@ public class ContentsGridActivity extends Activity {
 
         final String uri = getIntent().getStringExtra(PARAM_DATE);
 
-        // get SupportedApiSet
-        SampleApplication app = (SampleApplication) getApplication();
-        Set<String> apiSet = app.getSupportedApiList();
-        List<String> streamApi = Arrays.asList("setStreamingContent", "startStreaming",
-                "stopStreaming");
-        final boolean isStreamSupported = apiSet.containsAll(streamApi);
-
         new Thread() {
 
             @Override
             public void run() {
                 try {
                     JSONObject replyJson = SimpleRemoteApiHelper.getContentListOfDay(
-                            mRemoteApi, uri, isStreamSupported);
+                            mRemoteApi, uri);
                     if (SimpleRemoteApi.isErrorReply(replyJson)) {
                         // error case
                         JSONArray resultsObj = replyJson.getJSONArray("error");
@@ -166,25 +184,9 @@ public class ContentsGridActivity extends Activity {
                             // not available now.
                             // call again after camera status is changed to
                             // ContentsTransfer.
-                            Log.d(TAG, "update again after status change.");
-                            mEventObserver = new SimpleCameraEventObserver(//
-                                    ContentsGridActivity.this.getApplicationContext(), mRemoteApi);
-                            mEventObserver.activate();
-                            mEventObserver
-                                    .setEventChangeListener(new SimpleCameraEventObserver.ChangeListenerTmpl() {
-
-                                        @Override
-                                        public void onCameraStatusChanged(String status) {
-                                            Log.d(TAG, "onCameraStatusChanged:" + status);
-                                            if ("ContentsTransfer".equals(status)) {
-                                                mEventObserver.release();
-                                                updateThumbnails();
-                                            }
-                                        }
-                                    });
-                            mEventObserver.start();
-
                         } else {
+                            mEventObserver.release();
+                            mEventObserver = null;
                             Log.w(TAG, "updateThumbnails: Error:" + resultCode);
                             DisplayHelper.toast(getApplicationContext(), //
                                     R.string.msg_error_content);
@@ -212,6 +214,29 @@ public class ContentsGridActivity extends Activity {
 
     }
 
+    private void setCameraStatusChangeListener() {
+        // call getContentsList after camera status is changed to ContentsTransfer.
+        Log.d(TAG, "update after status change.");
+        mEventObserver
+                .setEventChangeListener(new SimpleCameraEventObserver.ChangeListenerTmpl() {
+
+                    @Override
+                    public void onCameraStatusChanged(String status) {
+                        Log.d(TAG, "onCameraStatusChanged:" + status);
+                        if ("ContentsTransfer".equals(status)) {
+                            updateThumbnails();
+                        }
+                    }
+
+                    @Override
+                    public void onResponseError() {
+                        Log.d(TAG, "onResponseError");
+                        DisplayHelper.toast(getApplicationContext(), R.string.msg_error_content);
+                        DisplayHelper.setProgressIndicator(ContentsGridActivity.this, false);
+                    }
+                });
+    }
+
     /**
      * Pick up non Browsable items to display.
      * 
@@ -222,28 +247,29 @@ public class ContentsGridActivity extends Activity {
         List<PhotoThumbnail> photoList = new ArrayList<PhotoThumbnail>();
 
         JSONObject jsonContent;
-        try {
-            for (int i = 0; i < items.length(); i++) {
+        boolean error_content = false;
+        for (int i = 0; i < items.length(); i++) {
+            try {
                 jsonContent = items.getJSONObject(i);
                 if ("false".equals(jsonContent.getString("isBrowsable"))) {
                     JSONObject contentInfo = jsonContent.getJSONObject("content");
                     String fileName = contentInfo.getJSONArray("original").getJSONObject(0)//
                             .getString("fileName");
-
                     photoList.add(new PhotoThumbnail(//
-                            contentInfo.getString("thumbnailUrl"), //
-                            contentInfo.getString("largeUrl"), //
-                            jsonContent.getString("contentKind"), //
-                            jsonContent.getString("uri"), //
+                            contentInfo.optString("thumbnailUrl"), //
+                            contentInfo.optString("largeUrl"), //
+                            jsonContent.optString("contentKind"), //
+                            jsonContent.optString("uri"), //
                             fileName));
                 }
+            } catch (JSONException e) {
+                Log.w(TAG, "updatePhotoAdapter: JSON format error." + e.getMessage());
+                error_content = true;
             }
-        } catch (JSONException e) {
-            Log.w(TAG, "updatePhotoAdapter: JSON format error." + e.getMessage());
-            DisplayHelper.toast(getApplicationContext(), R.string.msg_error_content);
-            DisplayHelper.setProgressIndicator(ContentsGridActivity.this, false);
         }
-
+        if (error_content) {
+            DisplayHelper.toast(getApplicationContext(), R.string.msg_error_content);
+        }
         addItemsToAdapter(photoList);
     }
 
@@ -271,6 +297,7 @@ public class ContentsGridActivity extends Activity {
         Log.d(TAG, "onPause() exec");
         if (mEventObserver != null) {
             mEventObserver.release();
+            mEventObserver.clearEventChangeListener();
         }
         mPhotoGridAdapter.release();
         mGridView.setAdapter(null);
@@ -397,6 +424,24 @@ public class ContentsGridActivity extends Activity {
         private void downloadImage(final int position, final View view) {
 
             final PhotoThumbnail item = getItem(position);
+            if(TextUtils.isEmpty(item.getThumbnailUrl())) {
+                Log.d(TAG, "downloadImage: thumbnailUrl is empty");
+                if (mIsActive) {
+                    DisplayHelper.toast(mActivity.getApplicationContext(), //
+                            R.string.msg_error_content);
+                    DisplayHelper.setProgressIndicator(mActivity, false);
+                }
+                return;
+            }
+            if ("still".equals(item.getContentKind()) && TextUtils.isEmpty(item.getLargeUrl())) {
+                Log.d(TAG, "downloadImage: largeUrl is empty");
+                if (mIsActive) {
+                    DisplayHelper.toast(mActivity.getApplicationContext(), //
+                            R.string.msg_error_content);
+                    DisplayHelper.setProgressIndicator(mActivity, false);
+                }
+                return;
+            }
 
             try {
                 mExecutor.execute(new Runnable() {
